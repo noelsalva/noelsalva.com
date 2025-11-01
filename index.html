@@ -47,7 +47,7 @@
     <img src="noel.png" alt="Profile Picture" class="animate__animated animate__fadeInDown">
     <h1 class="animate__animated animate__fadeInUp">Hello, I'm <span style="color:#00ffb3;">NOEL</span></h1>
     <p class="animate__animated animate__fadeInUp animate__delay-1s">Web Developer | Designer | Programmer | Graphic Artist</p>
-    <a href="resume.pdf" download class="btn resume-btn mt-3 animate__animated animate__fadeInUp animate__delay-2s">Download Resume</a>
+    <a id="resumeLink" href="resume.pdf" download class="btn resume-btn mt-3 animate__animated animate__fadeInUp animate__delay-2s">Download Resume</a>
   </section>
 
   <!-- About -->
@@ -131,5 +131,24 @@
 
   <!-- Custom JS -->
   <script src="script.js"></script>
+
+  <!-- Mobile Resume Behavior -->
+  <script>
+    const link = document.getElementById('resumeLink');
+
+    function isMobileDevice() {
+        return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    if (isMobileDevice()) {
+        // Remove download attribute on mobile
+        link.removeAttribute('download');
+        // Open in new tab on mobile
+        link.setAttribute('target', '_blank');
+        // Optional: change button text for clarity
+        link.textContent = "View Resume";
+    }
+  </script>
+
 </body>
 </html>
