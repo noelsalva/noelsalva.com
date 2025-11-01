@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>3D Hover Gallery</title>
+
+  <!-- Google font -->
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;600;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      font-family: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      font-size: clamp(14px, 1.8vw, 20px);
+
+      --clr-bg: #020617;
+      --clr-text: #fff;
+      --clr-primary: #fff;
+
+      --hover-intensity: 10rem;
+      --hover-smoothness: 70ms;
+      --fall-smoothness: 250ms;
+      --perspective: 2000px;
+
+      /* these will be set by JS */
+      --max-p: 12;
+      --max-z: 9;
+      --p: 1;  /* currently focused picture (1-based) */
+      --z: 1;  /* currently active hover-zone (1-based) */
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      min-height:100svh;
+      display:grid;
+      place-items:center;
+      background:var(--clr-bg);
+      color:var(--clr-text);
+      padding:2rem;
+      overflow:hidden;
+    }
+
+    /* nav container */
+    nav.gallery{
+      width:min(1100px,95vw);
+      height:min(360px,42vh);
+      display:flex;
+      align-items:flex-end;
+      gap:0.6rem;
+      perspective:var(--perspective);
+      transform-style:preserve-3d;
+      position:relative;
+      --dir: 0deg;
+    }
+
+    /* each tile anchor */
+    nav.gallery a.tile{
+      flex:1 1 0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      height:100%;
+      position:relative;
+      overflow:visible;
+      text-decoration:none;
+      color:inherit;
+      border-radius:0.35rem;
+      transform-style:preserve-3d;
+      transition: transform var(--hover-smoothness) ease, filter var(--fall-smoothness) ease, flex .3s;
+      cursor:pointer;
+      outline: none;
+    }
+
+    /* dynamic visual effect based on CSS variables */
+    nav.gallery a.tile{
+      /* --i set by JS (0-based index). Use 1-based for --p variable comparisons */
+      --i-one: calc(var(--i) + 1);
+      --max-p-n: calc(var(--max-p) - 1);
+      /* normalized pos (0..1) of this item */
+      --p-n: calc((var(--i) / max(1,var(--max-p-n))));
+      /* normalized pointer/selected picture (0..1) */
+      --selected-n: calc((var(--p) - 1) / max(1,var(--max-p) - 1));
+      /* distance measure */
+      --diff: calc(var(--p-n) - var(--selected-n));
+      /* absolute distance (approx) */
+      --u: calc(abs(var(--diff)));
+      /* falloff: smootherstep-like approximation */
+      --falloff: calc(clamp(1 - var(--u) * 1.5, 0, 1));
+      /* tilt magnitude (deg) */
+      --tilt: calc((var(--diff) * 40deg) * var(--falloff));
+      transform:
+        translateZ(calc(var(--falloff) * var(--hover-intensity)))
+        rotateY(calc(var(--tilt)));
+      filter: brightness(calc(max(0.5, var(--falloff)))) saturate(calc(var(--falloff)));
+    }
+
+    /* enlarge the hovered/focused tile */
+    nav.gallery a.tile:hover,
+    nav.gallery a.tile:focus-visible{
+      flex:4;
+      z-index:40;
+    }
+
+    .tile .img {
+      width:100%;
+      height:100%;
+      background-color:#fff3;
+      background-size:cover;
+      background-position:center;
+      border-radius:0.35rem;
+      display:block;
+      transform-origin:center;
+      position:relative;
+    }
+
+    /* hover-zone container (overlaid) */
+    .hover-zone{
+      position:absolute;
+      inset:0;
+      display:flex;
+      pointer-events:auto; /* receive pointer on slices */
+      gap:0;
+      z-index:50;
+    }
+
+    .hover-zone i{
+      flex:1;
+      display:block;
+      height:100%;
+      transition: background .15s;
+      background: linear-gradient(0deg, transparent 0 30%, #00000022 31% 70%, transparent 71%);
+      /* visually faint dividers */
+    }
+
+    /* highlight the hovered slice */
+    .hover-zone i:hover{
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.25));
+    }
+
+    /* debug label + checkbox */
+    .debug {
+      position:fixed;
+      left:1rem;
+      bottom:1rem;
+      color:var(--clr-text);
+      font-size:.9rem;
+      opacity:.6;
+      user-select:none;
+      display:inline-flex;
+      gap:.5rem;
+      align-items:center;
+      z-index:200;
+      backdrop-filter: blur(6px);
+      padding:.35rem .6rem;
+      border-radius:.5rem;
+      border:1px solid rgba(255,255,255,0.03);
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    }
+    .debug input{width:1rem;height:1rem}
+    .counters{
+      position:fixed;
+      right:1rem;
+      bottom:1rem;
+      color:var(--clr-text);
+      font-size:.8rem;
+      opacity:.0;
+      pointer-events:none;
+      white-space:pre;
+      background:#0005;
+      padding:.3rem .5rem;
+      border-radius:.3rem;
+      transition:opacity .2s;
+    }
+    .counters.visible{opacity:.95; pointer-events:auto;}
+
+    /* show explicit focus */
+    a.tile:focus-visible{
+      box-shadow:0 6px 24px rgba(0,0,0,0.6), 0 0 0 3px rgba(255,255,255,0.06) inset;
+    }
+
+    /* small screens: stack vertically */
+    @media (max-width:640px){
+      nav.gallery{flex-direction:column; height:min(62vh,720px)}
+      nav.gallery a.tile{height:100px}
+    }
+
+  </style>
+</head>
+<body>
+
+  <nav class="gallery" aria-label="3D image gallery"></nav>
+
+  <label class="debug" title="Toggle debug overlay">
+    <input id="dbg" type="checkbox" />
+    Debug
+  </label>
+
+  <div id="counters" class="counters" aria-hidden="true"></div>
+
+<script>
+  /***************************************************************
+   * Configuration - change these values to adjust gallery size
+   ***************************************************************/
+  const pictures = 12;        // number of tiles
+  const hoverZones = 9;       // number of vertical hover slices per tile
+  const api = "https://unsplash.it/800"; // image base (appends ?i)
+
+  /***************************************************************
+   * Build DOM
+   ***************************************************************/
+  const nav = document.querySelector('nav.gallery');
+
+  // set css variables on nav
+  nav.style.setProperty('--max-p', pictures);
+  nav.style.setProperty('--max-z', hoverZones);
+
+  // create tiles
+  for (let i = 0; i < pictures; i++){
+    const a = document.createElement('a');
+    a.href = "#";
+    a.className = "tile";
+    a.setAttribute('aria-label', `Image ${i+1}`);
+    a.tabIndex = 0;
+
+    // store index in CSS var for each tile (so CSS can access --i)
+    a.style.setProperty('--i', i);
+
+    // inner image div
+    const img = document.createElement('div');
+    img.className = 'img';
+    // use query param so the server returns different image
+    img.style.backgroundImage = `url('${api}?${i+1}')`;
+
+    // hover zone overlay with slices
+    const aside = document.createElement('aside');
+    aside.className = 'hover-zone';
+    // add small aria hint for screen readers
+    aside.setAttribute('aria-hidden','true');
+
+    for (let z = 0; z < hoverZones; z++){
+      const slice = document.createElement('i');
+      slice.dataset.z = z + 1; // 1-based zone index
+      aside.appendChild(slice);
+    }
+
+    a.appendChild(img);
+    a.appendChild(aside);
+    nav.appendChild(a);
+  }
+
+  /***************************************************************
+   * Interaction logic:
+   * - When a tile is hovered/focused, set --p to that tile index+1
+   * - When a slice inside a tile is hovered, set --z to slice index
+   * - Debug checkbox toggles counters visibility
+   ***************************************************************/
+  const tiles = Array.from(document.querySelectorAll('nav.gallery a.tile'));
+  const counters = document.getElementById('counters');
+  const dbgCheckbox = document.getElementById('dbg');
+
+  function setP(pIndexOneBased){
+    nav.style.setProperty('--p', String(pIndexOneBased));
+    updateCounters();
+  }
+
+  function setZ(zIndexOneBased){
+    nav.style.setProperty('--z', String(zIndexOneBased));
+    updateCounters();
+  }
+
+  function updateCounters(){
+    const p = getComputedStyle(nav).getPropertyValue('--p').trim();
+    const z = getComputedStyle(nav).getPropertyValue('--z').trim();
+    counters.textContent = `p: ${p}\nz: ${z}`;
+  }
+
+  // initial defaults
+  setP(1);
+  setZ(1);
+
+  // tile hover / focus handlers
+  tiles.forEach((tile, idx) => {
+    // when pointer enters tile, set selected picture index
+    tile.addEventListener('mouseenter', () => setP(idx + 1));
+    // when focused by keyboard, set p
+    tile.addEventListener('focus', () => setP(idx + 1));
+    // when clicked, briefly set p and keep focus
+    tile.addEventListener('click', (e) => {
+      e.preventDefault();
+      setP(idx + 1);
+      tile.focus();
+    });
+
+    // handle hover on the slices inside the tile
+    const slices = Array.from(tile.querySelectorAll('.hover-zone i'));
+    slices.forEach((s, si) => {
+      s.addEventListener('mouseenter', (ev) => {
+        setZ(si + 1);
+        // add a subtle highlight on the parent tile while hovering a slice
+        tile.style.transform = "translateZ(calc(var(--falloff) * 14rem)) scale(1.02)";
+      });
+      s.addEventListener('mouseleave', () => {
+        // roughly restore
+        tile.style.transform = "";
+      });
+
+      // for touch screens: handle touchstart to set Z
+      s.addEventListener('touchstart', (ev) => {
+        setZ(si + 1);
+      }, {passive:true});
+    });
+  });
+
+  // When debug toggled, show or hide counters and reveal more styles
+  dbgCheckbox.addEventListener('change', (e) => {
+    if (e.target.checked) {
+      counters.classList.add('visible');
+    } else {
+      counters.classList.remove('visible');
+    }
+  });
+
+  // keyboard navigation: left / right arrow to move between tiles
+  document.addEventListener('keydown', (ev) => {
+    const key = ev.key;
+    const pNow = Number(getComputedStyle(nav).getPropertyValue('--p') || 1);
+    if (key === 'ArrowRight') {
+      const next = Math.min(pNow + 1, pictures);
+      setP(next);
+      tiles[next-1].focus();
+      ev.preventDefault();
+    } else if (key === 'ArrowLeft') {
+      const prev = Math.max(pNow - 1, 1);
+      setP(prev);
+      tiles[prev-1].focus();
+      ev.preventDefault();
+    }
+  });
+
+  // responsive consideration: if user moves mouse across gallery, pick the closest tile
+  nav.addEventListener('mousemove', (ev) => {
+    // compute which tile center is closest horizontally to pointer
+    const rect = nav.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const percent = x / rect.width;
+    const pIndex = Math.round(percent * (pictures - 1)) + 1;
+    // only update if changed
+    const current = Number(getComputedStyle(nav).getPropertyValue('--p'));
+    if (pIndex >= 1 && pIndex <= pictures && pIndex !== current) {
+      setP(pIndex);
+    }
+  });
+
+  // small helper to clamp a CSS calc expression fallback for older browsers
+  // we used max(1, var(--max-p)-1) in CSS but older browsers might not parse it;
+  // ensure CSS variable exists in all cases by setting defaults
+  nav.style.setProperty('--max-p', pictures);
+  nav.style.setProperty('--max-z', hoverZones);
+
+  // initialize counters text
+  updateCounters();
+
+  // try to set initial images to load quickly
+  tiles.forEach((t, idx) => {
+    const bg = t.querySelector('.img').style.backgroundImage;
+    // create a low-priority preloader
+    const url = bg.slice(5, -2);
+    const img = new Image();
+    img.src = url;
+  });
+
+</script>
+</body>
+</html>

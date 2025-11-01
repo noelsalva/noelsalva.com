@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Animated Image Gallery</title>
+  <style>
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      height: 100vh;
+      background: #000814;
+    }
+
+    .gallery_wrapper {
+      --img-size: calc(100px - 0.5rem / 2);
+      display: grid;
+      gap: 0.5rem;
+      grid-template-columns: repeat(6, var(--img-size));
+      grid-template-rows: repeat(4, var(--img-size));
+    }
+
+    .gallery_wrapper img {
+      max-width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      grid-column: span 2;
+      border-radius: 0.5rem;
+      clip-path: path(
+        "M 80 20 C 100 0 100 0 120 20 C 140 40 160 60 180 80 C 200 100 200 100 180 120 C 160 140 140 160 120 180 C 100 200 100 200 80 180 C 60 160 40 140 20 120 C 0 100 0 100 20 80 Z"
+      );
+      transition: filter 500ms, clip-path 500ms;
+    }
+
+    .gallery_wrapper img:nth-of-type(4),
+    .gallery_wrapper img:nth-of-type(9) {
+      grid-column: 2 / span 2;
+    }
+
+    .gallery_wrapper img:hover {
+      z-index: 100;
+      clip-path: path(
+        "M 0 0 C 100 0 100 0 200 0 C 200 50 200 50 200 80 C 200 100 200 100 200 120 C 200 150 200 150 200 200 C 100 200 100 200 0 200 C 0 150 0 150 0 120 C 0 100 0 100 0 80 Z"
+      );
+    }
+
+    .gallery_wrapper img:not(:hover) {
+      animation: zIndexFix 500ms;
+    }
+
+    .gallery_wrapper:hover > img {
+      filter: brightness(0.5) saturate(0.5);
+    }
+
+    .gallery_wrapper > img:hover {
+      filter: brightness(1) saturate(1.5);
+    }
+
+    @keyframes zIndexFix {
+      0%,
+      100% {
+        z-index: 10;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <article class="gallery_wrapper">
+    <img src="https://images.unsplash.com/photo-1522943854798-7ea1c5464eba?q=80&w=3274&auto=format&fit=crop" alt="Balloon with controlled fire">
+    <img src="https://images.unsplash.com/photo-1498435999018-6803de1f1c1f?q=80&w=3273&auto=format&fit=crop" alt="Minimalists catchphrase">
+    <img src="https://images.unsplash.com/photo-1541695226403-a09aa08e5135?q=80&w=3276&auto=format&fit=crop" alt="Hiking Directional Signs">
+    <img src="https://images.unsplash.com/photo-1609951651467-713256d1a3be?q=80&w=3328&auto=format&fit=crop" alt="drinks">
+    <img src="https://images.unsplash.com/photo-1525351326368-efbb5cb6814d?q=80&w=3181&auto=format&fit=crop" alt="breakfast">
+    <img src="https://images.unsplash.com/34/BA1yLjNnQCI1yisIZGEi_2013-07-16_1922_IMG_9873.jpg?q=80&w=3271&auto=format&fit=crop" alt="Alpine mountains under a clear sky">
+    <img src="https://images.unsplash.com/photo-1581472723648-909f4851d4ae?q=80&w=3270&auto=format&fit=crop" alt="Gradient Glowing Laptop">
+    <img src="https://images.unsplash.com/photo-1635321856129-af8531379f4b?q=80&w=3000&auto=format&fit=crop" alt="Staples container">
+    <img src="https://images.unsplash.com/photo-1586348943529-beaae6c28db9?q=80&w=3230&auto=format&fit=crop" alt="the island">
+    <img src="https://images.unsplash.com/photo-1579888286284-692fa4bdc42b?q=80&w=3280&auto=format&fit=crop" alt="Crystal Tower">
+    <img src="https://images.unsplash.com/photo-1529369623266-f5264b696110?q=80&w=3174&auto=format&fit=crop" alt="Car with man on death valley">
+    <img src="https://images.unsplash.com/photo-1583513702439-2e611c58e93d?q=80&w=3269&auto=format&fit=crop" alt="christmas elf looking dog">
+    <img src="https://images.unsplash.com/photo-1618220179428-22790b461013?q=80&w=3327&auto=format&fit=crop" alt="interior design">
+  </article>
+
+</body>
+</html>
